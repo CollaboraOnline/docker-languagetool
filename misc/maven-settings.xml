@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
+<!--
+  LanguageTool's pom declares repo.languagetool.org (release and snapshot) in
+  front of Maven Central. Everything a release build needs is on Central, and
+  when that host is down every artifact lookup first waits for a connect
+  timeout there, which turns the build into hours. Block it.
+-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.2.0 https://maven.apache.org/xsd/settings-1.2.0.xsd">
+  <mirrors>
+    <mirror>
+      <id>repo.languagetool.org-blocked</id>
+      <mirrorOf>repo.languagetool.org</mirrorOf>
+      <url>http://0.0.0.0/</url>
+      <blocked>true</blocked>
+    </mirror>
+  </mirrors>
+</settings>

@@ -12,21 +12,13 @@ envout:
 prepare:
 	sudo apt-get -qq -y install curl
 
-build: download
+build:
 	docker buildx build $(BUILDARG_VERSION) $(BUILDARG_PLATFORM) -t $(IMAGENAME):latest .
 	docker buildx build $(BUILDARG_VERSION) --load -t $(IMAGENAME):latest .
 
-download: LanguageTool-$(VERSION).zip
-	-rm -rf LanguageTool-$(VERSION) LanguageTool-$(UNPACKED_VERSION)
-	echo ":: unzipping LanguageTool-$(VERSION).zip"
-	unzip -o LanguageTool-$(VERSION).zip 2>&1 1>/dev/null
-
-LanguageTool-$(VERSION).zip:
-	curl -L https://www.languagetool.org/download/LanguageTool-$(VERSION).zip -o LanguageTool-$(VERSION).zip
-
 test: test-cleanup.1
 test: test-start
-test: TESTIPADDRESS=$(subst ",,$(shell docker inspect languagetool | jq '.[0].NetworkSettings.IPAddress'))
+test: TESTIPADDRESS=$(shell docker inspect -f '{{.NetworkSettings.IPAddress}}' languagetool)
 test: test-print-ip-address
 test: test-run-test-lang
 test: test-run-test-en
