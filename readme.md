@@ -5,12 +5,12 @@
 [LanguageTool] is an open source grammar, style and spelling checker for
 English, French, German, Polish, Spanish and some thirty other languages.
 This repository builds the `collabora/languagetool` image on Docker Hub:
-the LanguageTool HTTP server, built from LanguageTool's release tag (no
-binary archive is published after 6.6), on the Eclipse Temurin Java
-runtime. Collabora Office uses it as a remote sentence checker; see
-`docker/languagetool` in https://github.com/CollaboraOnline/online for
-running it beside Collabora Office. It is based on the original image by
-Silvio Fricke, `silviof/docker-languagetool`.
+the LanguageTool HTTP server, from the languagetool-standalone release
+on Maven Central, on the Eclipse Temurin Java runtime. Collabora Office
+uses it as a remote sentence checker; see `docker/languagetool` in
+https://github.com/CollaboraOnline/online for running it beside Collabora
+Office. It is based on the original image by Silvio Fricke,
+`silviof/docker-languagetool`.
 
 The image is free to use, but unsupported. LanguageTool is released under
 the LGPL 2.1 or later; its licence text and the licences of the third
@@ -74,10 +74,11 @@ The LanguageTool browser add-on can use this server with its "Local server
 # Building
 
     make build    # all platforms, then the host platform into the local image store
-    make test     # start the local image and send it a few requests
+    make test     # start the local image and check that it serves $(VERSION)
     make tag      # build and push :latest and :$(VERSION) to $(IMAGENAME)
 
-`Makefile.version` holds the LanguageTool version, the image name and the
+`Makefile.version` holds the LanguageTool version and the SHA-256 of its
+languagetool-standalone zip on Maven Central, the image name and the
 runtime base image; `base-image.digest` holds the digest of the base image
 that the image is built on, and `make update-base` sets it to the current
 one.
