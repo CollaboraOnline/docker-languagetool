@@ -1,5 +1,5 @@
 
-name: Test for silviof/docker-languagetool
+name: Test collabora/languagetool
 
 on:
   pull_request:
@@ -21,7 +21,7 @@ jobs:
 
       - name: Set environment variables
         run: |
-          make envout >> ${GITHUB_ENV}
+          make envout >> "$GITHUB_ENV"
 
       - name: Prepare system
         run: |

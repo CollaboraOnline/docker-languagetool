@@ -1,6 +1,10 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 VERSION := 6.8
 UNPACKED_VERSION := $(shell echo $(VERSION) | sed -e 's/\([0-9]\+\.[0-9]\+\)\(.*\)/\1/')
-BUILDARG_VERSION := --build-arg VERSION=$(VERSION) --build-arg UNPACKED_VERSION=$(UNPACKED_VERSION)
-IMAGENAME := docker.io/silviof/docker-languagetool
+# The runtime base image. base-image.digest holds the digest of it that the
+# image is built on; make update-base sets it to the current one.
+BASE_IMAGE := docker.io/library/eclipse-temurin:17-jre
+BASE_DIGEST := $(shell cat base-image.digest 2>/dev/null)
+BUILDARG_VERSION := --build-arg VERSION=$(VERSION) --build-arg UNPACKED_VERSION=$(UNPACKED_VERSION) --build-arg BASE_IMAGE=$(BASE_IMAGE) --build-arg BASE_DIGEST=$(BASE_DIGEST)
+IMAGENAME := docker.io/collabora/languagetool
 BUILDARG_PLATFORM := --platform linux/amd64,linux/arm64/v8,linux/arm/v7

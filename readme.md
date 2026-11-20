@@ -1,59 +1,90 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 
-# Introduction
+# LanguageTool server image
 
-[LanguageTool] is an Open Source proof­reading software for English, French,
-German, Polish, and more than 20 other languages.
+[LanguageTool] is an open source grammar, style and spelling checker for
+English, French, German, Polish, Spanish and some thirty other languages.
+This repository builds the `collabora/languagetool` image on Docker Hub:
+the LanguageTool HTTP server, built from LanguageTool's release tag (no
+binary archive is published after 6.6), on the Eclipse Temurin Java
+runtime. Collabora Office uses it as a remote sentence checker; see
+`docker/languagetool` in https://github.com/CollaboraOnline/online for
+running it beside Collabora Office. It is based on the original image by
+Silvio Fricke, `silviof/docker-languagetool`.
 
-You can use the LanguageTools with a [firefox-plugin].
+The image is free to use, but unsupported. LanguageTool is released under
+the LGPL 2.1 or later; its licence text and the licences of the third
+party libraries are in the image, in `/LanguageTool-<version>`.
 
-This is a Dockerfile to get the languagetools running on a system without java.
-
-[LanguageTool]: https://www.languagetool.org/
-[firefox-plugin]: https://addons.mozilla.org/firefox/addon/languagetool
+[LanguageTool]: https://languagetool.org/
 
 # Usage
 
-The Server is running on port 8010, this port should exposed.
+The server listens on port 8010, speaks plain HTTP, and has no
+authentication: keep it on localhost or on an internal network, or behind
+a reverse proxy that serves HTTPS.
 
-    $ docker pull silviof/docker-languagetool
-    [...]
-    $ docker run --rm -p 8010:8010 silviof/docker-languagetool
+    docker run --rm -p 127.0.0.1:8010:8010 collabora/languagetool
+    curl -d 'text=The%20catt%20sat%20down.&language=en-US' http://127.0.0.1:8010/v2/check
 
-Or you run it in background via `-d`-option.
+The API is described at https://languagetool.org/http-api/swagger-ui/;
+`/v2/languages` is an easy request to see that the server runs.
 
-Run with no minimum rights and RAM
-```
-docker run --name languagetool \
-                        --cap-drop=ALL \
-                        --user=65534:65534 \
-                        --read-only \
-                        -p 127.0.0.1:8010:8010 \
-                        --memory 412m --memory-swap 500m \
-                        -e EXTRAOPTIONS="-Xmx382M" \
-                        silviof/docker-languagetool:latest
-```
+The environment variables of the container:
 
-Route information can be found at https://languagetool.org/http-api/swagger-ui/#/default, an easy route to test that it's running is `/v2/languages`.
+- `JAVAOPTIONS` goes to the Java runtime, as in `JAVAOPTIONS=-Xmx768m`.
+- `EXTRAOPTIONS` goes to the server; its options are listed at
+  https://dev.languagetool.org/http-server.
+- A server configuration property is set with a variable of its name
+  prefixed with `LT_`, as in `LT_maxTextLength=50000`. They are written to
+  `/tmp/config.properties` at start.
 
-## ngram support
+With the fewest rights and a memory limit; `/tmp` must stay writable for
+the `LT_` variables:
 
-To support [ngrams] you need an additional volume or directory mounted to the
-`/ngrams` directory. For that add a `-v` to the `docker run`-command.
+    docker run --name languagetool \
+        --cap-drop=ALL \
+        --user=65534:65534 \
+        --read-only --tmpfs /tmp \
+        -p 127.0.0.1:8010:8010 \
+        --memory 412m --memory-swap 500m \
+        -e JAVAOPTIONS=-Xmx382m \
+        collabora/languagetool
 
-    docker run ... -v /path/to/ngrams:/ngrams ...
+## n-gram data
 
-[ngrams]: https://dev.languagetool.org/finding-errors-using-n-gram-data
-
-
-Download English ngrams with the commands:
+LanguageTool finds more confused words with [n-gram data], which is large
+(several gigabytes per language) and is not in the image. Unpack it on the
+host and mount the directory at `/ngrams`:
 
     mkdir ngrams
     wget https://languagetool.org/download/ngram-data/ngrams-en-20150817.zip
     (cd ngrams && unzip ../ngrams-en-20150817.zip)
     rm -f ngrams-en-20150817.zip
+    docker run -d --name languagetool -p 127.0.0.1:8010:8010 \
+        -v "$PWD"/ngrams:/ngrams:ro --restart=unless-stopped \
+        collabora/languagetool
 
+The LanguageTool browser add-on can use this server with its "Local server
+(localhost)" setting, which expects it at port 8081: publish it with
+`-p 127.0.0.1:8081:8010` for that.
 
-One can use them using web browser plugin "Local server (localhost)" setting by running:
+[n-gram data]: https://dev.languagetool.org/finding-errors-using-n-gram-data
 
-    docker run -d --name languagetool -p 127.0.0.1:8081:8010 -v `pwd`/ngrams:/ngrams:ro --restart=unless-stopped silviof/docker-languagetool
+# Building
+
+    make build    # all platforms, then the host platform into the local image store
+    make test     # start the local image and send it a few requests
+    make tag      # build and push :latest and :$(VERSION) to $(IMAGENAME)
+
+`Makefile.version` holds the LanguageTool version, the image name and the
+runtime base image; `base-image.digest` holds the digest of the base image
+that the image is built on, and `make update-base` sets it to the current
+one.
+
+The release workflow builds, tests and pushes the image for a release tag
+and when started by hand. Once a day it also compares the current digest of
+the base image with `base-image.digest`; when they differ, it rebuilds on
+the new base, pushes the image, and commits the new digest. It logs in to
+Docker Hub with the `DOCKERHUB_USERNAME` and `DOCKERHUB_PASSWORD` secrets
+of the repository.

@@ -1,7 +1,16 @@
 
-name: Release for silvio/docker-languagetool
+name: Release collabora/languagetool
+
+# Builds, tests and pushes the image for a release tag, when started by
+# hand, and when the runtime base image has changed: the daily run compares
+# the current digest of the base image with base-image.digest, and when they
+# differ it rebuilds on the new base, pushes the image, and commits the new
+# digest to the default branch.
 
 on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 4 * * *'
   push:
     tags:
       - '[0-9]+.[0-9]+'
@@ -9,12 +18,51 @@ on:
       - '[0-9]+.[0-9]+-update[0-9]+'
       - '[0-9]+.[0-9]+.[0-9]+-update[0-9]+'
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
-  docker:
+  check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      release: ${{ steps.base.outputs.release }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Check the base image
+        id: base
+        run: |
+          if [ "${{ github.event_name }}" != schedule ]; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          make update-base
+          if git diff --quiet -- base-image.digest; then
+            echo "Base image unchanged: $(cat base-image.digest)"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Base image changed: $(git show HEAD:base-image.digest) -> $(cat base-image.digest)"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  docker:
+    needs: check
+    if: needs.check.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update the base image digest
+        if: github.event_name == 'schedule'
+        run: |
+          make update-base
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -25,7 +73,7 @@ jobs:
 
       - name: Set environment variables
         run: |
-          make envout >> ${GITHUB_ENV}
+          make envout >> "$GITHUB_ENV"
 
       - name: Prepare system
         run: |
@@ -49,3 +97,13 @@ jobs:
         run: |
           make tag
 
+      - name: Commit the new base image digest
+        if: github.event_name == 'schedule'
+        run: |
+          if git diff --quiet -- base-image.digest; then
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m "Rebuild on the new base image $(cat base-image.digest)" -- base-image.digest
+          git push
