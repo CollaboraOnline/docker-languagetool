@@ -31,7 +31,7 @@ jobs:
       release: ${{ steps.base.outputs.release }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Check the base image
         id: base
@@ -57,7 +57,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Update the base image digest
         if: github.event_name == 'schedule'
@@ -65,11 +65,11 @@ jobs:
           make update-base
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Set environment variables
         run: |
@@ -88,7 +88,7 @@ jobs:
           make test
 
       - name: Login Docker
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
