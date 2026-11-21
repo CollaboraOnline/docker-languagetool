@@ -86,6 +86,7 @@ one.
 The release workflow builds, tests and pushes the image for a release tag
 and when started by hand. Once a day it also compares the current digest of
 the base image with `base-image.digest`; when they differ, it rebuilds on
-the new base, pushes the image, and commits the new digest. It logs in to
-Docker Hub with the `DOCKERHUB_USERNAME` and `DOCKERHUB_PASSWORD` secrets
-of the repository.
+the new base, pushes the image, and commits the new digest; a run started
+by hand on the default branch commits the digest it built on too. It logs
+in to Docker Hub with the `DOCKERHUB_USERNAME` and `DOCKERHUB_PASSWORD`
+secrets of the repository.

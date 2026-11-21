@@ -5,7 +5,8 @@ name: Release collabora/languagetool
 # hand, and when the runtime base image has changed: the daily run compares
 # the current digest of the base image with base-image.digest, and when they
 # differ it rebuilds on the new base, pushes the image, and commits the new
-# digest to the default branch.
+# digest to the default branch. A run started by hand on the default branch
+# always rebuilds, on the current base, and commits its digest too.
 
 on:
   workflow_dispatch:
@@ -60,7 +61,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Update the base image digest
-        if: github.event_name == 'schedule'
+        if: github.event_name != 'push' && github.ref_name == github.event.repository.default_branch
         run: |
           make update-base
 
@@ -98,7 +99,7 @@ jobs:
           make tag
 
       - name: Commit the new base image digest
-        if: github.event_name == 'schedule'
+        if: github.event_name != 'push' && github.ref_name == github.event.repository.default_branch
         run: |
           if git diff --quiet -- base-image.digest; then
             exit 0
